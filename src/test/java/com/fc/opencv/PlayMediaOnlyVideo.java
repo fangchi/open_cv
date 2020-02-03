@@ -65,7 +65,7 @@ public class PlayMediaOnlyVideo {
                     }
 
                     //处理视频
-                    processVideo(storage, fg, vf, i,canvasFrame);
+                    processVideo(fg, vf, i,canvasFrame);
                 } catch (FrameGrabber.Exception e) {
                     e.printStackTrace();
                 }
@@ -78,13 +78,11 @@ public class PlayMediaOnlyVideo {
 
     /**
      * 处理视频
-     *
-     * @param storage
      * @param fg
      * @param f          帧
      * @param frameIndex 帧index
      */
-    private void processVideo(VideoStorage storage, FFmpegFrameGrabber fg, Frame f, long frameIndex,CanvasFrame canvasFrame) {
+    private void processVideo(FFmpegFrameGrabber fg, Frame f, long frameIndex,CanvasFrame canvasFrame) {
         BufferedImage bi = (new Java2DFrameConverter()).getBufferedImage(f);
         if (bi != null) {
             ImageIcon ii = new ImageIcon(bi);
