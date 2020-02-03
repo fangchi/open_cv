@@ -1,7 +1,7 @@
 # JAVA-CV
 
 ## 基本概念
-视频数据本身由视频文件承载，视频文件由数据帧（frame）组成，一般来说视频帧按照文件类型划分可以分为**视频帧**和**音频帧**，视频帧本质上一副静态图片(image),音频帧本质上是一段声音，他们共同构成了视频文件的基础文件结构。如下图：
+视频数据本身由视频文件(或流媒体)承载，视频数据由数据帧（frame）组成，一般来说视频帧按照文件类型划分可以分为<span style="color:red">**视频帧**</span>和<span style="color:red">**音频帧**</span>，视频帧本质上一副静态图片(image),音频帧本质上是一段声音，他们共同构成了视频文件的基础文件结构。如下图：
 
 ![视频文件基本格式](images/%E8%A7%86%E9%A2%91%E6%96%87%E4%BB%B6%E5%9F%BA%E6%9C%AC%E6%A0%BC%E5%BC%8F.PNG)
 
@@ -315,6 +315,19 @@ class SomeClass {
         BufferedImage image = storage.consume();
         canvasFrame.showImage(image);
     }
+}
+
+
+/**
+ * 视频资源获取执行器
+ **/
+public FFmpegFrameGrabber(String filename) {
+        this.filename = filename;
+  			//AV_PIX_FMT_NONE 默认像素格式 其他如RGB，YUV420P
+  			//FFmpeg视频解码后，一般存储为AV_PIX_FMT_YUV420P 的format，而解码后的数据存储在结构体 AVFrame 中。YUV420P在内存中的排布
+        this.pixelFormat = AV_PIX_FMT_NONE;
+  			//声音格式
+        this.sampleFormat = AV_SAMPLE_FMT_NONE;
 }
 ```
 

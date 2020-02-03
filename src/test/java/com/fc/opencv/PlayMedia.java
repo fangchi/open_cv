@@ -1,13 +1,12 @@
 package com.fc.opencv;
 
+import com.google.common.eventbus.EventBus;
 import com.google.gson.Gson;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.*;
-import org.bytedeco.javacv.Frame;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -21,9 +20,9 @@ public class PlayMedia {
 
     //https://www.jb51.net/article/131329.htm
     public static void main(String[] args) throws FrameGrabber.Exception, InterruptedException {
-        //String fileName = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/The Aurora (Northern Lights).mp4";
+        String fileName = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/我只在乎你.mp4";
         //String fileName = "/Users/fangchi/Music/网易云音乐/i2star - 湖光水色调.mp3";
-        String fileName = "rtsp://192.168.38.137:8554/ff";
+        //String fileName = "rtsp://192.168.38.137:8554/ff";
         float vol = 1f;//音量
         new PlayMedia(fileName,vol);
 
@@ -38,10 +37,12 @@ public class PlayMedia {
      */
     public PlayMedia(String path,float vol) throws FrameGrabber.Exception, InterruptedException {
         FFmpegFrameGrabber fg = new FFmpegFrameGrabber(path);
+        //针对rtsp流
         fg.setOption("rtsp_transport", "udp");
+//        fg.setImageWidth(fg.getImageWidth());
+//        fg.setImageHeight(fg.getImageHeight());
         fg.setImageWidth(800);
         fg.setImageHeight(600);
-
         fg.start();
         printMetaInfo(fg);
         //初始化幕布
@@ -54,6 +55,12 @@ public class PlayMedia {
         SourceDataLine sourceDataLine = initSourceDataLine(fg);
         //获取视频帧率
         int frameRate = (int) fg.getFrameRate();
+
+
+        EventBus eventBus = new EventBus("play");
+        PlayViedoListner listener = new PlayViedoListner();
+        eventBus.register(listener);
+
         new Thread(() -> {
             long i = 0;
             while (true) {
@@ -63,45 +70,42 @@ public class PlayMedia {
                     Frame vf = fg.grabFrame(true, true, true, false);
                     if (vf == null) {
                         fg.stop();
+                        fg.release();
                         System.exit(0);
                     }
                     //处理音频
                     processAudio(fg, vf, vol, sourceDataLine, i);
                     //处理视频
-                    processVideo(storage, fg, vf, i);
+                    processVideo(eventBus,storage, fg, vf, i);
                 } catch (FrameGrabber.Exception e) {
                     e.printStackTrace();
                 }
             }
         }).start();
 
-        startRepresent(frameRate,storage,canvasFrame);
+        startRepresent(eventBus,frameRate,storage,canvasFrame);
 
         while (true) {
             Thread.sleep(1000);
         }
     }
 
-    private void startRepresent(int frameRate,VideoStorage storage,CanvasFrame canvasFrame){
+    private void startRepresent(EventBus eventBus,int frameRate,VideoStorage storage,CanvasFrame canvasFrame){
         new Thread(() -> {
             int curentRate = frameRate;
             while (true) {
-                if (storage.getRate() > 0.1) { //库存积压 加速
-                    curentRate++;
-                } else {
-                    curentRate--;// 库存不足 减速
-                    if (curentRate < frameRate) {
-                        curentRate = frameRate;
+                if (storage.getRate() <= 0.1) { //库存积压 加速
+                    curentRate= frameRate;// 库存不足 按照码率播放
+                    try {
+                        int sleep = 1000 / curentRate;
+                        Thread.sleep(sleep);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
-
-                try {
-                    Thread.sleep(1000 / curentRate);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 BufferedImage image = storage.consume();
-                canvasFrame.showImage(image);
+                eventBus.post(new ShowImageEvent(canvasFrame,image));
+
             }
         }).start();
     }
@@ -114,13 +118,10 @@ public class PlayMedia {
      * @param f          帧
      * @param frameIndex 帧index
      */
-    private void processVideo(VideoStorage storage, FFmpegFrameGrabber fg, Frame f, long frameIndex) {
+    private void processVideo(EventBus eventBus,VideoStorage storage, FFmpegFrameGrabber fg, Frame f, long frameIndex) {
         BufferedImage bi = (new Java2DFrameConverter()).getBufferedImage(f);
         if (bi != null) {
-            ImageIcon ii = new ImageIcon(bi);
-            //打水印
-            Util.mark(bi, ii.getImage(), "Hello RTSP current :" + Util.getTimeString(fg.getTimestamp()), new Font("宋体", Font.PLAIN, 20), Color.WHITE, 20, 20);
-            storage.produce(bi);
+            eventBus.post(new VideoEvent(bi,storage,fg.getTimestamp()));
         } else {
             //System.out.println("%%%%第"+frameIndex+"帧为视频空帧");
         }

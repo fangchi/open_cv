@@ -72,11 +72,11 @@ public class RtspTransferToFile {
     //
     public static void main(String[] args)
             throws Exception {
-        //String inputFile = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/The Aurora (Northern Lights).mp4";
-        String inputFile = "rtsp://192.168.38.137:8554/ff";
+        String inputFile = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/我只在乎你.mp4";
+        //String inputFile = "rtsp://192.168.38.137:8554/ff";
         // Decodes-encodes
         String outputFile = "recorde.mp4";
-        //frameRecord(inputFile, outputFile,0);
+        frameRecord(inputFile, outputFile,0);
         FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(outputFile);
         grabber.start();
         System.out.println(grabber.getVideoCodec());

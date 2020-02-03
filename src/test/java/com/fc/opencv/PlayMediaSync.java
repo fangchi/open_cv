@@ -21,9 +21,9 @@ import java.nio.ShortBuffer;
 public class PlayMediaSync {
 
     public static void main(String[] args) throws FrameGrabber.Exception, InterruptedException {
-        //String fileName = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/The Aurora (Northern Lights).mp4";
+        String fileName = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/我只在乎你.mp4";
         //String fileName = "/Users/fangchi/Music/网易云音乐/i2star - 湖光水色调.mp3";
-        String fileName = "rtsp://192.168.38.137:8554/ff";
+        //String fileName = "rtsp://192.168.38.137:8554/ff";
         float vol = 1f;//音量
         new PlayMediaSync(fileName,vol);
 
