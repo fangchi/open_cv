@@ -1,7 +1,6 @@
 package com.fc.opencv;
 
 import com.google.common.eventbus.EventBus;
-import com.google.gson.Gson;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.*;
 
@@ -23,7 +22,7 @@ public class PlayMedia {
         String fileName = "/Users/fangchi/live/iPc.me-TheAuroraNorthernLights/我只在乎你.mp4";
         //String fileName = "/Users/fangchi/Music/网易云音乐/i2star - 湖光水色调.mp3";
         //String fileName = "rtsp://192.168.38.137:8554/ff";
-        float vol = 1f;//音量
+        float vol = 1.2f;//音量
         new PlayMedia(fileName,vol);
 
     }
@@ -44,7 +43,7 @@ public class PlayMedia {
         fg.setImageWidth(800);
         fg.setImageHeight(600);
         fg.start();
-        printMetaInfo(fg);
+        Util.printMetaInfo(fg);
         //初始化幕布
         CanvasFrame canvasFrame = new CanvasFrame(path);
         canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -52,11 +51,9 @@ public class PlayMedia {
         //初始化视频帧存储
         VideoStorage storage = new VideoStorage();
         //初始化音频
-        SourceDataLine sourceDataLine = initSourceDataLine(fg);
+        SourceDataLine sourceDataLine = initSourceDataLine(fg,vol);
         //获取视频帧率
         int frameRate = (int) fg.getFrameRate();
-
-
         EventBus eventBus = new EventBus("play");
         PlayViedoListner listener = new PlayViedoListner();
         eventBus.register(listener);
@@ -74,7 +71,7 @@ public class PlayMedia {
                         System.exit(0);
                     }
                     //处理音频
-                    processAudio(fg, vf, vol, sourceDataLine, i);
+                    processAudio(fg, vf, sourceDataLine, i);
                     //处理视频
                     processVideo(eventBus,storage, fg, vf, i);
                 } catch (FrameGrabber.Exception e) {
@@ -133,11 +130,10 @@ public class PlayMedia {
      *
      * @param fg
      * @param f
-     * @param vol
      * @param sourceDataLine
      * @param frameindex
      */
-    private void processAudio(FFmpegFrameGrabber fg, Frame f, float vol, SourceDataLine sourceDataLine, long frameindex) {
+    private void processAudio(FFmpegFrameGrabber fg, Frame f, SourceDataLine sourceDataLine, long frameindex) {
         int k;
         Buffer[] buf = f.samples;
         if (buf != null) {
@@ -150,9 +146,9 @@ public class PlayMedia {
             switch (sampleFormat) {
                 case avutil.AV_SAMPLE_FMT_FLTP://平面型左右声道分开。
                     leftData = (FloatBuffer) buf[0];
-                    TLData = Util.floatToByteValue(leftData, vol);
+                    TLData = Util.floatToByteValue(leftData);
                     rightData = (FloatBuffer) buf[1];
-                    TRData = Util.floatToByteValue(rightData, vol);
+                    TRData = Util.floatToByteValue(rightData);
                     tl = TLData.array();
                     tr = TRData.array();
                     combine = new byte[tl.length + tr.length];
@@ -168,21 +164,21 @@ public class PlayMedia {
                     break;
                 case avutil.AV_SAMPLE_FMT_S16://非平面型左右声道在一个buffer中。
                     ILData = (ShortBuffer) buf[0];
-                    TLData = Util.shortToByteValue(ILData, vol);
+                    TLData = Util.shortToByteValue(ILData);
                     tl = TLData.array();
                     sourceDataLine.write(tl, 0, tl.length);
                     break;
                 case avutil.AV_SAMPLE_FMT_FLT://float非平面型
                     leftData = (FloatBuffer) buf[0];
-                    TLData = Util.floatToByteValue(leftData, vol);
+                    TLData = Util.floatToByteValue(leftData);
                     tl = TLData.array();
                     sourceDataLine.write(tl, 0, tl.length);
                     break;
                 case avutil.AV_SAMPLE_FMT_S16P://平面型左右声道分开
                     ILData = (ShortBuffer) buf[0];
                     IRData = (ShortBuffer) buf[1];
-                    TLData = Util.shortToByteValue(ILData, vol);
-                    TRData = Util.shortToByteValue(IRData, vol);
+                    TLData = Util.shortToByteValue(ILData);
+                    TRData = Util.shortToByteValue(IRData);
                     tl = TLData.array();
                     tr = TRData.array();
                     combine = new byte[tl.length + tr.length];
@@ -207,13 +203,39 @@ public class PlayMedia {
     }
 
     /**
-     * 初始话
-     *
+     * 初始化音频处理器
      * @param fg
      */
-    private SourceDataLine initSourceDataLine(FFmpegFrameGrabber fg) {
+    private SourceDataLine initSourceDataLine(FFmpegFrameGrabber fg,float vol) {
         SourceDataLine sourceDataLine = null;
         AudioFormat af = null;
+        af = getAudioFormat(fg, af);
+        try {
+            //java原生JDK进行 音频处理
+            DataLine.Info dataLineInfo = new DataLine.Info(SourceDataLine.class,
+                    af, AudioSystem.NOT_SPECIFIED);
+            sourceDataLine = (SourceDataLine) AudioSystem.getLine(dataLineInfo);
+            sourceDataLine.open(af);
+            sourceDataLine.start();
+
+            FloatControl fc = (FloatControl) sourceDataLine.getControl(FloatControl.Type.MASTER_GAIN);
+            double value = vol;//音量是以分贝 (db) 为单位的量
+            float dB =(float) (Math.log(value==0.0?0.0001:value)/Math.log(10.0)*20.0);
+            fc.setValue(dB);
+
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        }
+        return sourceDataLine;
+    }
+
+    /**
+     * 获取音频格式
+     * @param fg
+     * @param af
+     * @return
+     */
+    static AudioFormat getAudioFormat(FFmpegFrameGrabber fg, AudioFormat af) {
         switch (fg.getSampleFormat()) {
             case avutil.AV_SAMPLE_FMT_U8://无符号short 8bit
                 break;
@@ -248,34 +270,10 @@ public class PlayMedia {
                 System.out.println("不支持的音乐格式");
                 System.exit(0);
         }
-        DataLine.Info dataLineInfo = new DataLine.Info(SourceDataLine.class,
-                af, AudioSystem.NOT_SPECIFIED);
-        try {
-            sourceDataLine = (SourceDataLine) AudioSystem.getLine(dataLineInfo);
-            sourceDataLine.open(af);
-            sourceDataLine.start();
-        } catch (LineUnavailableException e) {
-            e.printStackTrace();
-        }
-        return sourceDataLine;
+        return af;
     }
 
 
-    private void printMetaInfo(FFmpegFrameGrabber fg) {
-        System.out.println("getSampleFormat:" + fg.getSampleFormat());//有符号short 16bit,平面型
-        System.out.println("SampleRate:" + fg.getSampleRate());
-        System.out.println("getVideoCodecName:" + fg.getVideoCodecName());
-        System.out.println("getAudioCodecName:" + fg.getAudioCodecName());
-        System.out.println("length:" + fg.getLengthInTime() / 1000000L);
-        System.out.println("getImageHeight:" + fg.getImageHeight());
-        System.out.println("getImageWidth:" + fg.getImageWidth());
-        System.out.println("Format:" + fg.getFormat());
-        System.out.println("getMetadata:" + new Gson().toJson(fg.getMetadata()));
-        System.out.println("音频通道数:" + fg.getAudioChannels());
-        System.out.println("视频总帧数:" + fg.getLengthInVideoFrames());
-        System.out.println("音频总帧数:" + fg.getLengthInAudioFrames());
-        System.out.println("视频帧数率:" + fg.getVideoFrameRate());
-        System.out.println("音频帧数率:" + fg.getAudioFrameRate());
-    }
+
 
 }

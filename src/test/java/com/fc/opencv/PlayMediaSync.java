@@ -1,6 +1,5 @@
 package com.fc.opencv;
 
-import com.google.gson.Gson;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.*;
 import org.bytedeco.javacv.Frame;
@@ -186,40 +185,7 @@ public class PlayMediaSync {
     private SourceDataLine initSourceDataLine(FFmpegFrameGrabber fg) {
         SourceDataLine sourceDataLine = null;
         AudioFormat af = null;
-        switch (fg.getSampleFormat()) {
-            case avutil.AV_SAMPLE_FMT_U8://无符号short 8bit
-                break;
-            case avutil.AV_SAMPLE_FMT_S16://有符号short 16bit
-                af = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, fg.getSampleRate(), 16, fg.getAudioChannels(), fg.getAudioChannels() * 2, fg.getSampleRate(), true);
-                break;
-            case avutil.AV_SAMPLE_FMT_S32:
-                break;
-            case avutil.AV_SAMPLE_FMT_FLT:
-                af = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, fg.getSampleRate(), 16, fg.getAudioChannels(), fg.getAudioChannels() * 2, fg.getSampleRate(), true);
-                break;
-            case avutil.AV_SAMPLE_FMT_DBL:
-                break;
-            case avutil.AV_SAMPLE_FMT_U8P:
-                break;
-            case avutil.AV_SAMPLE_FMT_S16P://有符号short 16bit,平面型
-                af = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, fg.getSampleRate(), 16, fg.getAudioChannels(), fg.getAudioChannels() * 2, fg.getSampleRate(), true);
-                break;
-            case avutil.AV_SAMPLE_FMT_S32P://有符号short 32bit，平面型，但是32bit的话可能电脑声卡不支持，这种音乐也少见
-                af = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, fg.getSampleRate(), 32, fg.getAudioChannels(), fg.getAudioChannels() * 2, fg.getSampleRate(), true);
-                break;
-            case avutil.AV_SAMPLE_FMT_FLTP://float 平面型 需转为16bit short
-                af = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, fg.getSampleRate(), 16, fg.getAudioChannels(), fg.getAudioChannels() * 2, fg.getSampleRate(), true);
-                break;
-            case avutil.AV_SAMPLE_FMT_DBLP:
-                break;
-            case avutil.AV_SAMPLE_FMT_S64://有符号short 64bit 非平面型
-                break;
-            case avutil.AV_SAMPLE_FMT_S64P://有符号short 64bit平面型
-                break;
-            default:
-                System.out.println("不支持的音乐格式");
-                System.exit(0);
-        }
+        af = PlayMedia.getAudioFormat(fg, af);
         DataLine.Info dataLineInfo = new DataLine.Info(SourceDataLine.class,
                 af, AudioSystem.NOT_SPECIFIED);
         try {
@@ -234,20 +200,7 @@ public class PlayMediaSync {
 
 
     private void printMetaInfo(FFmpegFrameGrabber fg) {
-        System.out.println("getSampleFormat:" + fg.getSampleFormat());//有符号short 16bit,平面型
-        System.out.println("SampleRate:" + fg.getSampleRate());
-        System.out.println("getVideoCodecName:" + fg.getVideoCodecName());
-        System.out.println("getAudioCodecName:" + fg.getAudioCodecName());
-        System.out.println("length:" + fg.getLengthInTime() / 1000000L);
-        System.out.println("getImageHeight:" + fg.getImageHeight());
-        System.out.println("getImageWidth:" + fg.getImageWidth());
-        System.out.println("Format:" + fg.getFormat());
-        System.out.println("getMetadata:" + new Gson().toJson(fg.getMetadata()));
-        System.out.println("音频通道数:" + fg.getAudioChannels());
-        System.out.println("视频总帧数:" + fg.getLengthInVideoFrames());
-        System.out.println("音频总帧数:" + fg.getLengthInAudioFrames());
-        System.out.println("视频帧数率:" + fg.getVideoFrameRate());
-        System.out.println("音频帧数率:" + fg.getAudioFrameRate());
+        Util.printMetaInfo(fg);
     }
 
 }

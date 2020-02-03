@@ -1,10 +1,14 @@
 package com.fc.opencv;
 
+import com.google.gson.Gson;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+
 public class Util {
     /**
      * 打印音频缓冲区情况
@@ -26,32 +30,61 @@ public class Util {
      * 打印其他信息
      */
     public static boolean DEBUG5 = false;
-    public static ByteBuffer shortToByteValue(ShortBuffer arr,float vol) {
-        int len  = arr.capacity();
+
+    public static ByteBuffer shortToByteValue(ShortBuffer arr, float vol) {
+        int len = arr.capacity();
         ByteBuffer bb = ByteBuffer.allocate(len * 2);
-        for(int i = 0;i<len;i++){
-            bb.putShort(i*2,(short)((float)arr.get(i)*vol));
+        for (int i = 0; i < len; i++) {
+            bb.putShort(i * 2, (short) ((float) arr.get(i) * vol));
         }
         return bb; // 默认转为大端序
     }
+
+
+    public static ByteBuffer shortToByteValue(ShortBuffer arr) {
+        int len = arr.capacity();
+        ByteBuffer bb = ByteBuffer.allocate(len * 2);
+        for (int i = 0; i < len; i++) {
+            bb.putShort(i * 2, (short) ((float) arr.get(i)));
+        }
+        return bb; // 默认转为大端序
+    }
+
     public static ByteBuffer floatToByteForm(FloatBuffer arr) {
         //这个函数仅仅将float数据转为了float的字节代表形式，不代表float的值。
         ByteBuffer bb = ByteBuffer.allocate(arr.capacity() * 4);
         bb.asFloatBuffer().put(arr);
         return bb; //
     }
-    public static ByteBuffer floatToByteValue(FloatBuffer arr,float vol){
+
+    public static ByteBuffer floatToByteValue(FloatBuffer arr, float vol) {
         int len = arr.capacity();
         float f;
         float v;
-        ByteBuffer res = ByteBuffer.allocate(len*2);
-        v = 32768.0f*vol;
-        for(int i=0;i<len;i++){
-            f = arr.get(i)*v;//Ref：https://stackoverflow.com/questions/15087668/how-to-convert-pcm-samples-in-byte-array-as-floating-point-numbers-in-the-range
-            if(f>v) f = v;
-            if(f<-v) f = v;
+        ByteBuffer res = ByteBuffer.allocate(len * 2);
+        v = 32768.0f * vol;
+        for (int i = 0; i < len; i++) {
+            f = arr.get(i) * v;//Ref：https://stackoverflow.com/questions/15087668/how-to-convert-pcm-samples-in-byte-array-as-floating-point-numbers-in-the-range
+            if (f > v) f = v;
+            if (f < -v) f = v;
             //默认转为大端序
-            res.putShort(i*2,(short)f);//注意乘以2，因为一次写入两个字节。
+            res.putShort(i * 2, (short) f);//注意乘以2，因为一次写入两个字节。
+        }
+        return res;
+    }
+
+    public static ByteBuffer floatToByteValue(FloatBuffer arr) {
+        int len = arr.capacity();
+        float f;
+        float v;
+        ByteBuffer res = ByteBuffer.allocate(len * 2);
+        v = 32768.0f;
+        for (int i = 0; i < len; i++) {
+            f = arr.get(i) * v;//Ref：https://stackoverflow.com/questions/15087668/how-to-convert-pcm-samples-in-byte-array-as-floating-point-numbers-in-the-range
+            if (f > v) f = v;
+            if (f < -v) f = v;
+            //默认转为大端序
+            res.putShort(i * 2, (short) f);//注意乘以2，因为一次写入两个字节。
         }
         return res;
     }
@@ -71,24 +104,43 @@ public class Util {
         g.drawString(text, x, y);
         g.dispose();
     }
-    public static String getTimeString(long timeUS){
-        long Sec,Hour,Min;
+
+    public static String getTimeString(long timeUS) {
+        long Sec, Hour, Min;
         String H;
         String M;
         String S;
-        Sec = timeUS/1000000;
-        Hour = Sec/3600;
+        Sec = timeUS / 1000000;
+        Hour = Sec / 3600;
         H = timeConvert(Hour);
-        Min = Sec/60-Hour*60;
+        Min = Sec / 60 - Hour * 60;
         M = timeConvert(Min);
-        S = timeConvert(Sec%60);
-        return H+":"+M+":"+S;
+        S = timeConvert(Sec % 60);
+        return H + ":" + M + ":" + S;
     }
-    private static String timeConvert(long time){
+
+    private static String timeConvert(long time) {
         String str = String.valueOf(time);
-        if(str.length()==1){
-            str = "0"+str;
+        if (str.length() == 1) {
+            str = "0" + str;
         }
         return str;
+    }
+
+    public static void printMetaInfo(FFmpegFrameGrabber fg) {
+        System.out.println("getSampleFormat:" + fg.getSampleFormat());//有符号short 16bit,平面型
+        System.out.println("SampleRate:" + fg.getSampleRate());
+        System.out.println("getVideoCodecName:" + fg.getVideoCodecName());
+        System.out.println("getAudioCodecName:" + fg.getAudioCodecName());
+        System.out.println("length:" + fg.getLengthInTime() / 1000000L);
+        System.out.println("getImageHeight:" + fg.getImageHeight());
+        System.out.println("getImageWidth:" + fg.getImageWidth());
+        System.out.println("Format:" + fg.getFormat());
+        System.out.println("getMetadata:" + new Gson().toJson(fg.getMetadata()));
+        System.out.println("音频通道数:" + fg.getAudioChannels());
+        System.out.println("视频总帧数:" + fg.getLengthInVideoFrames());
+        System.out.println("音频总帧数:" + fg.getLengthInAudioFrames());
+        System.out.println("视频帧数率:" + fg.getVideoFrameRate());
+        System.out.println("音频帧数率:" + fg.getAudioFrameRate());
     }
 }

@@ -10,6 +10,10 @@ import org.bytedeco.javacv.VideoInputFrameGrabber;
 
 import javax.swing.*;
 
+/**
+ * windows下程序不报错
+ * MAC报错
+ */
 public class CameraTest {
     public static void main(String[] args) throws FrameGrabber.Exception, InterruptedException {
         new CameraTest().doWithWebcam();
